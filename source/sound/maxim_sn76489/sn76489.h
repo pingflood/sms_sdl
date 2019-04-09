@@ -1,6 +1,6 @@
 
-#ifndef _SN76489_H_
-#define _SN76489_H_
+#ifndef SN76489_H_
+#define SN76489_H_
 
 #define MAX_SN76489     4
 
@@ -48,18 +48,16 @@ typedef struct
     int32_t WhiteNoiseFeedback;
     
     /* PSG registers: */
-    uint16_t Registers[8];        /* Tone, vol x4 */
+    int32_t Registers[8];        /* Tone, vol x4 */
     int32_t LatchedRegister;
-    uint16_t NoiseShiftRegister;
-    int16_t NoiseFreq;            /* Noise channel signal generator frequency */
+    int32_t NoiseShiftRegister;
+    int32_t NoiseFreq;            /* Noise channel signal generator frequency */
     
     /* Output calculation variables */
-    int16_t ToneFreqVals[4];      /* Frequency register values (counters) */
+    int32_t ToneFreqVals[4];      /* Frequency register values (counters) */
     int8_t ToneFreqPos[4];        /* Frequency channel flip-flops */
-    int16_t Channels[4];          /* Value of each channel, before stereo is applied */
-    /* It was using LONG_MIN in sn76489.c before but that requires a 64-bits variable so i changed it to INT_MIN instead.
-     * So far, i haven't noticed any regressions yet. - Gameblabla
-     * */
+    int32_t Channels[4];          /* Value of each channel, before stereo is applied */
+    /* It was using LONG_MIN in sn76489.c before but that requires a 64-bits variable so i changed it to INT_MIN instead. So far, i haven't noticed any regressions yet. - Gameblabla */
     int32_t IntermediatePos[4];   /* intermediate values used at boundaries between + and - */
 
 } SN76489_Context;
@@ -71,11 +69,11 @@ void SN76489_Shutdown(void);
 void SN76489_Config(int32_t which, int32_t mute, int32_t boost, int32_t volume, int32_t feedback);
 void SN76489_SetContext(int32_t which, uint8_t *data);
 void SN76489_GetContext(int32_t which, uint8_t *data);
-uint8 *SN76489_GetContextPtr(int32_t which);
-int SN76489_GetContextSize(void);
+uint8_t *SN76489_GetContextPtr(int32_t which);
+uint32_t SN76489_GetContextSize(void);
 void SN76489_Write(int32_t which, int32_t data);
 void SN76489_GGStereoWrite(int32_t which, int32_t data);
 void SN76489_Update(int32_t which, int16_t **buffer, int32_t length);
 
-#endif /* _SN76489_H_ */
+#endif /* SN76489_H_ */
 

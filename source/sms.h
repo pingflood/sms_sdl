@@ -22,8 +22,8 @@
  *
  ******************************************************************************/
 
-#ifndef _SMS_H_
-#define _SMS_H_
+#ifndef SMS_H_
+#define SMS_H_
 
 #define CYCLES_PER_LINE 228
 
@@ -94,19 +94,6 @@ enum {
 /* SMS context */
 typedef struct
 {
-	uint8_t wram[0x2000];
-	uint8_t paused;
-	uint8_t save;
-	uint8_t territory;
-	uint8_t console;
-	uint8_t display;
-	uint8_t fm_detect;
-	uint8_t glasses_3d;
-	uint8_t hlatch;
-	uint8_t use_fm;
-	uint8_t memctrl;
-	uint8_t ioctrl;
-	uint8_t irq;
 	struct 
 	{
 		uint8_t pdr;    /* Parallel data register */
@@ -115,17 +102,31 @@ typedef struct
 		uint8_t rxdata; /* Receive data buffer */
 		uint8_t sctrl;  /* Serial mode control and status */
 	} sio;
+	uint8_t wram[0x2000];
+	uint8_t paused;
+	uint8_t save;
+	uint8_t territory;
+	uint8_t console;
+	uint8_t display;
+	uint8_t glasses_3d;
+	uint8_t hlatch;
+	uint8_t memctrl;
+	uint8_t ioctrl;
+	uint8_t irq;
 	uint8_t device[2];
 	uint8_t gun_offset;
+	uint32_t fm_detect;
+	int32_t use_fm;
 } sms_t;
 
 /* BIOS ROM */
 typedef struct
 {
-  uint8_t *rom;
-  uint8_t enabled;
-  uint8_t pages;
-  uint8_t fcr[4];
+	uint8_t *rom;
+	uint8_t enabled;
+	/* We need to use an unsigned short for pages, as Bad Apple SMS requires it !*/
+	uint16_t pages;
+	uint8_t fcr[4];
 } bios_t;
 
 typedef struct
@@ -159,6 +160,6 @@ extern void sms_shutdown(void);
 extern void mapper_reset(void);
 extern void mapper_8k_w(uint16_t address, uint8_t data);
 extern void mapper_16k_w(uint16_t address, uint8_t data);
-extern int sms_irq_callback(int param);
+extern int32_t sms_irq_callback(int32_t param);
 
 #endif /* _SMS_H_ */

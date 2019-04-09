@@ -2,16 +2,15 @@
     fileio.c --
     File management.
 */
-#include <zlib.h>
 #include "shared.h"
+#include "unzip.h"
 
-
-uint8 *loadFromZipByName(char *archive, char *filename, int *filesize)
+uint8_t *loadFromZipByName(char *archive, const char *filename, uint32_t *filesize)
 {
     char name[PATH_MAX];
-    unsigned char *buffer;
+    uint8_t *buffer;
 
-    int zerror = UNZ_OK;
+    int32_t zerror = UNZ_OK;
     unzFile zhandle;
     unz_file_info zinfo;
 
@@ -31,7 +30,7 @@ uint8 *loadFromZipByName(char *archive, char *filename, int *filesize)
     *filesize = zinfo.uncompressed_size;
 
     /* Error: file size is zero */
-    if(*filesize <= 0)
+    if(*filesize == 0)
     {
         unzClose(zhandle);
         return (NULL);
@@ -51,7 +50,7 @@ uint8 *loadFromZipByName(char *archive, char *filename, int *filesize)
     zerror = unzReadCurrentFile(zhandle, buffer, *filesize);
 
     /* Internal error: free buffer and close file */
-    if(zerror < 0 || zerror != *filesize)
+    if(zerror < 0 || zerror != (int32_t)*filesize)
     {
         free(buffer);
         buffer = NULL;
@@ -64,7 +63,7 @@ uint8 *loadFromZipByName(char *archive, char *filename, int *filesize)
     unzCloseCurrentFile(zhandle);
     unzClose(zhandle);
 
-    memcpy(filename, name, PATH_MAX);
+	memcpy(filename, name, PATH_MAX);
     return (buffer);
 }
 
@@ -72,9 +71,9 @@ uint8 *loadFromZipByName(char *archive, char *filename, int *filesize)
     Verifies if a file is a ZIP archive or not.
     Returns: 1= ZIP archive, 0= not a ZIP archive
 */
-int check_zip(char *filename)
+int32_t check_zip(const char *filename)
 {
-    unsigned char buf[2];
+    uint8_t buf[2];
     FILE* fd = NULL;
     fd = fopen(filename, "rb");
     if(!fd) return (0);
@@ -84,23 +83,3 @@ int check_zip(char *filename)
     if(memcmp(buf, "PK", 2) == 0) return (1);
     return (0);
 }
-
-
-/*
-    Returns the size of a GZ compressed file.
-*/
-/*int gzsize(gzFile *gd)
-{
-    #define CHUNKSIZE   (0x10000)
-    int size = 0, length = 0;
-    unsigned char buffer[CHUNKSIZE];
-    gzrewind(gd);
-    do {
-        size = gzread(gd, buffer, CHUNKSIZE);
-        if(size <= 0) break;
-        length += size;
-    } while (!gzeof(gd));
-    gzrewind(gd);
-    return (length);
-    #undef CHUNKSIZE
-}*/

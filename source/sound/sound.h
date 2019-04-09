@@ -22,8 +22,8 @@
  *
  ******************************************************************************/
 
-#ifndef _SOUND_H_
-#define _SOUND_H_
+#ifndef SOUND_H_
+#define SOUND_H_
 
 enum {
   STREAM_PSG_L, /* PSG left channel */
@@ -36,18 +36,18 @@ enum {
 /* Sound emulation structure */
 typedef struct
 {
-  void (*mixer_callback)(int16_t **stream, int16_t **output, uint32_t length);
-  int16_t *output[2];
-  int16_t *stream[STREAM_MAX];
-  int fm_which;
-  int enabled;
-  int fps;
-  int buffer_size;
-  int sample_count;
-  int sample_rate;
-  int done_so_far;
-  uint32_t fm_clock;
-  uint32_t psg_clock;
+	void (*mixer_callback)(int16_t **output, int32_t length);
+	int16_t *output[2];
+	int16_t *stream[STREAM_MAX];
+	int32_t fm_which;
+	int32_t enabled;
+	int32_t fps;
+	uint32_t buffer_size;
+	int32_t sample_count;
+	int32_t sample_rate;
+	int32_t done_so_far;
+	int32_t fm_clock;
+	int32_t psg_clock;
 } snd_t;
 
 
@@ -55,15 +55,15 @@ typedef struct
 extern snd_t snd;
 
 /* Function prototypes */
-void psg_write(uint32_t data);
-void psg_stereo_w(uint32_t data);
-int fmunit_detect_r(void);
+void psg_write(int32_t data);
+void psg_stereo_w(int32_t data);
+uint32_t fmunit_detect_r(void);
 void fmunit_detect_w(uint32_t data);
-void fmunit_write(uint32_t offset, uint32_t data);
-int sound_init(void);
-void sound_shutdown(void);
-void sound_reset(void);
-void sound_update(uint32_t line);
-void sound_mixer_callback(int16_t **stream, int16_t **output, uint32_t length);
+void fmunit_write(uint32_t offset, uint8_t data);
+uint32_t SMSPLUS_sound_init(void);
+void SMSPLUS_sound_shutdown(void);
+void SMSPLUS_sound_reset(void);
+void SMSPLUS_sound_update(int32_t line);
+void SMSPLUS_sound_mixer_callback(int16_t **output, int32_t length);
 
-#endif /* _SOUND_H_ */
+#endif /* SOUND_H_ */

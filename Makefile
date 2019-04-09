@@ -1,38 +1,75 @@
 PRGNAME     = sms.elf
+CC			= clang
 
-# define regarding OS, which compiler to use
-EXESUFFIX = 
-TOOLCHAIN = 
-CC          = gcc
-CCP         = g++
-LD          = gcc
+# Possible choices : rs97, k3s (PAP K3S), sdl, amini, fbdev
+PORT = sdl
+# Possible choices : alsa, pulse (pulseaudio), oss, sdl12 (SDL 1.2 sound output), portaudio, libao
+SOUND_OUTPUT = alsa
+# Possible choices : crabemu_sn76489 (less accurate, GPLv2), maxim_sn76489 (somewhat problematic license but good accuracy)
+SOUND_ENGINE = maxim_sn76489
+# Possible choices : z80 (accurate but proprietary), eighty (EightyZ80's core, GPLv2)
+Z80_CORE = z80
+SCALE2X_UPSCALER = 1
+PROFILE = 0
+ZIP_SUPPORT = 1
 
-# add SDL dependencies
+SRCDIR		= ./source ./source/cpu_cores/$(Z80_CORE) ./source/sound ./source/unzip
+SRCDIR		+= ./source/scalers ./source/ports/$(PORT) ./source/sound/$(SOUND_ENGINE) ./source/sound_output/$(SOUND_OUTPUT)
+VPATH		= $(SRCDIR)
+SRC_C		= $(foreach dir, $(SRCDIR), $(wildcard $(dir)/*.c))
+SRC_CP		= $(foreach dir, $(SRCDIR), $(wildcard $(dir)/*.cpp))
+OBJ_C		= $(notdir $(patsubst %.c, %.o, $(SRC_C)))
+OBJ_CP		= $(notdir $(patsubst %.cpp, %.o, $(SRC_CP)))
+OBJS		= $(OBJ_C) $(OBJ_CP)
 
-CFLAGS		= -O2 -std=gnu99 -DINLINE=inline -DLSB_FIRST
-CFLAGS 		+= -I/usr/include/SDL -Isource -Isource/eighty -Isource/generic -I./source/sound -Isource/unzip -Isource/sdl -Isource/sound/crabemu_sn76489
+CFLAGS		= -O0 -g -Weverything
+CFLAGS		+= -DLSB_FIRST -std=gnu99 -DALIGN_DWORD
+CFLAGS		+= -Isource -Isource/cpu_cores/$(Z80_CORE) -Isource/scalers -Isource/ports/$(PORT) -I./source/sound -Isource/unzip -Isource/sdl -Isource/sound/$(SOUND_ENGINE) -Isource/sound_output
 
-CXXFLAGS	= $(CFLAGS) 
-LDFLAGS     = -lSDL -lm -flto -lz -lportaudio
+SRCDIR		+= ./source/text/fb
+CFLAGS		+= -Isource/text/fb
 
-# Files to be r
-SRCDIR    = ./source ./source/unzip ./source/eighty ./source/sound ./source/generic ./source/amini ./source/sound/crabemu_sn76489
-VPATH     = $(SRCDIR)
-SRC_C   = $(foreach dir, $(SRCDIR), $(wildcard $(dir)/*.c))
-SRC_CP   = $(foreach dir, $(SRCDIR), $(wildcard $(dir)/*.cpp))
-OBJ_C   = $(notdir $(patsubst %.c, %.o, $(SRC_C)))
-OBJ_CP   = $(notdir $(patsubst %.cpp, %.o, $(SRC_CP)))
-OBJS     = $(OBJ_C) $(OBJ_CP)
+ifeq ($(PROFILE), YES)
+CFLAGS 		+= -fprofile-generate=/home/retrofw/profile
+else ifeq ($(PROFILE), APPLY)
+CFLAGS		+= -fprofile-use -fbranch-probabilities
+endif
+
+ifeq ($(SOUND_ENGINE), maxim_sn76489)
+CFLAGS 		+= -DMAXIM_PSG
+endif
+
+ifeq ($(ZIP_SUPPORT), 0)
+CFLAGS 		+= -DNOZIP_SUPPORT
+endif
+
+ifeq ($(SCALE2X_UPSCALER), 1)
+CFLAGS 		+= -DSCALE2X_UPSCALER
+CFLAGS		+= -Isource/scale2x
+SRCDIR		+= ./source/scale2x
+endif
+
+LDFLAGS     = -nodefaultlibs -lc -lgcc -lm -lSDL -no-pie -Wl,--as-needed -Wl,--gc-sections -s -flto
+
+ifeq ($(SOUND_OUTPUT), portaudio)
+LDFLAGS		+= -lportaudio
+endif
+ifeq ($(SOUND_OUTPUT), libao)
+LDFLAGS		+= -lao
+endif
+ifeq ($(SOUND_OUTPUT), alsa)
+LDFLAGS		+= -lasound
+endif
+ifeq ($(SOUND_OUTPUT), pulse)
+LDFLAGS		+= -lpulse -lpulse-simple
+endif
 
 # Rules to make executable
-$(PRGNAME)$(EXESUFFIX): $(OBJS)  
-	$(LD) $(CFLAGS) -o $(PRGNAME)$(EXESUFFIX) $^ $(LDFLAGS)
+$(PRGNAME): $(OBJS)  
+	$(CC) $(CFLAGS) -o $(PRGNAME) $^ $(LDFLAGS)
 
 $(OBJ_C) : %.o : %.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-$(OBJ_CP) : %.o : %.cpp
-	$(CCP) $(CXXFLAGS) -c -o $@ $<
-
 clean:
-	rm -f $(PRGNAME)$(EXESUFFIX) *.o
+	rm -f $(PRGNAME) *.o

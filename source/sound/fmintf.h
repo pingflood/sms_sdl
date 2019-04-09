@@ -1,6 +1,6 @@
 
-#ifndef _FMINTF_H_
-#define _FMINTF_H_
+#ifndef FMINTF_H_
+#define FMINTF_H_
 
 enum 
 {
@@ -19,12 +19,12 @@ typedef struct
 void FM_Init(void);
 void FM_Shutdown(void);
 void FM_Reset(void);
-void FM_Update(int16_t **buffer, uint32_t length);
-void FM_Write(uint32_t offset, uint32_t data);
+void FM_Update(int16_t **buffer, int32_t length);
+void FM_Write(uint32_t offset, uint8_t data);
 void FM_GetContext(uint8_t *data);
 void FM_SetContext(uint8_t *data);
-int FM_GetContextSize(void);
+uint32_t FM_GetContextSize(void);
 uint8_t *FM_GetContextPtr(void);
-void FM_WriteReg(uint32_t reg, uint32_t data);
+void FM_WriteReg(uint8_t reg, uint8_t data);
 
-#endif /* _FMINTF_H_ */
+#endif /* FMINTF_H_ */

@@ -28,17 +28,17 @@
 snd_t snd;
 static int16_t **fm_buffer;
 static int16_t **psg_buffer;
-int32_t *smptab;
-int32_t smptab_len;
+static int32_t *smptab;
+static int32_t smptab_len;
 
 #ifndef MAXIM_PSG
 sn76489_t psg_sn;
 #endif
 
-int sound_init(void)
+uint32_t SMSPLUS_sound_init(void)
 {
-	uint8_t *fmbuf = NULL;
-	uint8_t *psgbuf = NULL;
+	static uint8_t *fmbuf = NULL;
+	static uint8_t *psgbuf = NULL;
 	int32_t restore_sound = 0;
 	int32_t i;
 
@@ -48,26 +48,29 @@ int sound_init(void)
 	snd.psg_clock = (sms.display == DISPLAY_NTSC) ? CLOCK_NTSC : CLOCK_PAL;
 	snd.sample_rate = option.sndrate;
 	snd.mixer_callback = NULL;
-
+	
 	/* Save register settings */
 	if(snd.enabled)
 	{
 		restore_sound = 1;
 		#ifdef MAXIM_PSG
 		psgbuf = malloc(SN76489_GetContextSize ());
+		if (!psgbuf) return 0;
 		memcpy (psgbuf, SN76489_GetContextPtr (0),SN76489_GetContextSize ());
 		#else
 		psgbuf = malloc(sizeof(sn76489_t));
+		if (!psgbuf) return 0;
 		memcpy (&psg_sn, psgbuf, sizeof(sn76489_t));
 		#endif
 		fmbuf = malloc(FM_GetContextSize());
+		if (!fmbuf) return 0;
 		FM_GetContext(fmbuf);
 	}
 
 	/* If we are reinitializing, shut down sound emulation */
-	if(snd.enabled)
+	if (snd.enabled)
 	{
-		sound_shutdown();
+		SMSPLUS_sound_shutdown();
 	}
 
 	/* Disable sound until initialization is complete */
@@ -79,14 +82,14 @@ int sound_init(void)
 
 	/* Assign stream mixing callback if none provided */
 	if(!snd.mixer_callback)
-		snd.mixer_callback = sound_mixer_callback;
+		snd.mixer_callback = SMSPLUS_sound_mixer_callback;
 
 	/* Calculate number of samples generated per frame */
 	snd.sample_count = (snd.sample_rate / snd.fps);
 
 	/* Calculate size of sample buffer */
 	snd.buffer_size = snd.sample_count * 2;
-
+	
 	/* Free sample buffer position table if previously allocated */
 	if(smptab)
 	{
@@ -99,13 +102,12 @@ int sound_init(void)
 	smptab_len = (sms.display == DISPLAY_NTSC) ? 262 : 313;
 	smptab = malloc(smptab_len * sizeof(int32_t));
 	
-	if(!smptab) 
-		return 0;
+	if(!smptab) return 0;
 	
 	for (i = 0; i < smptab_len; i++)
 	{
-		double calc = (snd.sample_count * i);
-		calc = calc / (double)smptab_len;
+		float calc = (snd.sample_count * i);
+		calc = calc / (float)smptab_len;
 		smptab[i] = (int32_t)calc;
 	}
 
@@ -160,7 +162,7 @@ int sound_init(void)
 }
 
 
-void sound_shutdown(void)
+void SMSPLUS_sound_shutdown(void)
 {
 	uint32_t i;
 	
@@ -196,7 +198,7 @@ void sound_shutdown(void)
 }
 
 
-void sound_reset(void)
+void SMSPLUS_sound_reset(void)
 {
 	if(!snd.enabled)
 		return;
@@ -215,7 +217,7 @@ void sound_reset(void)
 }
 
 
-void sound_update(uint32_t line)
+void SMSPLUS_sound_update(int32_t line)
 {
 	int16_t *fm[2], *psg[2];
 
@@ -241,7 +243,7 @@ void sound_update(uint32_t line)
 		FM_Update(fm, snd.sample_count - snd.done_so_far);
 
 		/* Mix streams into output buffer */
-		snd.mixer_callback(snd.stream, snd.output, snd.sample_count);
+		snd.mixer_callback(snd.output, snd.sample_count);
 		/* Reset */
 		snd.done_so_far = 0;
 	}
@@ -272,9 +274,9 @@ void sound_update(uint32_t line)
 }
 
 /* Generic FM+PSG stereo mixer callback */
-void sound_mixer_callback(int16_t **stream, int16_t **output, uint32_t length)
+void SMSPLUS_sound_mixer_callback(int16_t **output, int32_t length)
 {
-	uint32_t i;
+	int32_t i;
 	for(i = 0; i < length; i++)
 	{
 		int16_t temp = (fm_buffer[0][i] + fm_buffer[1][i]) / 2;
@@ -287,7 +289,7 @@ void sound_mixer_callback(int16_t **stream, int16_t **output, uint32_t length)
 /* Sound chip access handlers                                               */
 /*--------------------------------------------------------------------------*/
 
-void psg_stereo_w(uint32_t data)
+void psg_stereo_w(int32_t data)
 {
 	if(!snd.enabled) return;
 	#ifdef MAXIM_PSG
@@ -297,12 +299,8 @@ void psg_stereo_w(uint32_t data)
 	#endif
 }
 
-void stream_update(uint32_t which, uint32_t position)
-{
-}
 
-
-void psg_write(uint32_t data)
+void psg_write(int32_t data)
 {
 	if(!snd.enabled) return;
 	#ifdef MAXIM_PSG
@@ -316,7 +314,7 @@ void psg_write(uint32_t data)
 /* Mark III FM Unit / Master System (J) built-in FM handlers                */
 /*--------------------------------------------------------------------------*/
 
-int fmunit_detect_r(void)
+uint32_t fmunit_detect_r(void)
 {
 	return sms.fm_detect;
 }
@@ -327,7 +325,7 @@ void fmunit_detect_w(uint32_t data)
 	sms.fm_detect = data;
 }
 
-void fmunit_write(uint32_t offset, uint32_t data)
+void fmunit_write(uint32_t offset, uint8_t data)
 {
 	if(!snd.enabled || !sms.use_fm) return;
 	FM_Write(offset, data);

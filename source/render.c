@@ -26,7 +26,7 @@
 /*** Vertical Counter Tables ***/
 extern uint8_t *vc_table[2][3];
 
-struct
+static struct
 {
   uint16_t yrange;
   uint16_t xpos;
@@ -66,14 +66,14 @@ static uint8_t object_index_count;
 static uint8_t active_border[2][3] =
 {
 	{24, 8,  0},  /* NTSC VDP */
-	{48, 32, 24}  /*  PAL VDP */
+	{24, 8,  0}   /* PAL  VDP */
 };
 
 /* Active Scan Area height */
 static uint16_t active_range[2] =
 {
 	243, /* NTSC VDP */
-	294  /*  PAL VDP */
+	267  /* PAL  VDP */
 };
 
 /* CRAM palette in TMS compatibility mode */
@@ -218,106 +218,92 @@ void render_shutdown(void)
 /* Initialize the rendering data */
 void render_init(void)
 {
-  int32_t i, j;
-  int32_t bx, sx, b, s, bp, bf, sf, c;
+	int32_t j;
+	int32_t bx, sx, b, s, bp, bf, sf, c;
 
-  make_tms_tables();
+	make_tms_tables();
 
-  /* Generate 64k of data for the look up table */
-  for(bx = 0; bx < 0x100; bx++)
-  {
-    for(sx = 0; sx < 0x100; sx++)
-    {
-      /* Background pixel */
-      b  = (bx & 0x0F);
+	/* Generate 64k of data for the look up table */
+	for(bx = 0; bx < 0x100; bx++)
+	{
+		for(sx = 0; sx < 0x100; sx++)
+		{
+			/* Background pixel */
+			b  = (bx & 0x0F);
 
-      /* Background priority */
-      bp = (bx & 0x20) ? 1 : 0;
+			/* Background priority */
+			bp = (bx & 0x20) ? 1 : 0;
 
-      /* Full background pixel + priority + sprite marker */
-      bf = (bx & 0x7F);
+			/* Full background pixel + priority + sprite marker */
+			bf = (bx & 0x7F);
 
-      /* Sprite pixel */
-      s  = (sx & 0x0F);
+			/* Sprite pixel */
+			s  = (sx & 0x0F);
 
-      /* Full sprite pixel, w/ palette and marker bits added */
-      sf = (sx & 0x0F) | 0x10 | 0x40;
+			/* Full sprite pixel, w/ palette and marker bits added */
+			sf = (sx & 0x0F) | 0x10 | 0x40;
 
-      /* Overwriting a sprite pixel ? */
-      if(bx & 0x40)
-      {
-        /* Return the input */
-        c = bf;
-      }
-      else
-      {
-        /* Work out priority and transparency for both pixels */
-        if(bp)
-        {
-          /* Underlying pixel is high priority */
-          if(b)
-          {
-            c = bf | 0x40;
-          }
-          else
-          {
-            if(s)
-            {
-              c = sf;
-            }
-            else
-            {
-              c = bf;
-            }
-          }
-        }
-        else
-        {
-          /* Underlying pixel is low priority */
-          if(s)
-          {
-            c = sf;
-          }
-          else
-          {
-            c = bf;
-          }
-        }
-      }
+			/* Overwriting a sprite pixel ? */
+			if(bx & 0x40)
+			{
+				/* Return the input */
+				c = bf;
+			}
+			else
+			{
+				/* Work out priority and transparency for both pixels */
+				if(bp)
+				{
+					/* Underlying pixel is high priority */
+					if(b)
+					{
+						c = bf | 0x40;
+					}
+					else
+					{
+						if(s) c = sf;
+						else c = bf;
+					}
+				}
+				else
+				{
+					/* Underlying pixel is low priority */
+					if(s) c = sf;
+					else c = bf;
+				}
+			}
+			/* Store result */
+			lut[(bx << 8) | (sx)] = c;
+		}
+	}
 
-      /* Store result */
-      lut[(bx << 8) | (sx)] = c;
-    }
-  }
-
-  /* Make bitplane to pixel lookup table */
-  for(i = 0; i < 0x100; i++)
-  for(j = 0; j < 0x100; j++)
-  {
-    int x;
-    uint32_t out = 0;
-    for(x = 0; x < 8; x++)
-    {
-      out |= (j & (0x80 >> x)) ? (uint32_t)(8 << (x << 2)) : 0;
-      out |= (i & (0x80 >> x)) ? (uint32_t)(4 << (x << 2)) : 0;
-    }
+	/* Make bitplane to pixel lookup table */
+	for(int32_t i = 0; i < 0x100; i++)
+	for(j = 0; j < 0x100; j++)
+	{
+		int32_t x;
+		uint32_t out = 0;
+		for(x = 0; x < 8; x++)
+		{
+			out |= (j & (0x80 >> x)) ? (uint32_t)(8 << (x << 2)) : 0;
+			out |= (i & (0x80 >> x)) ? (uint32_t)(4 << (x << 2)) : 0;
+		}
 #if LSB_FIRST
-    bp_lut[(j << 8) | (i)] = out;
+		bp_lut[(j << 8) | (i)] = out;
 #else
-    bp_lut[(i << 8) | (j)] = out;
+		bp_lut[(i << 8) | (j)] = out;
 #endif
-  }
+	}
 
-  sms_cram_expand_table[0] =  0;
-  sms_cram_expand_table[1] = (5 << 3)  + (1 << 2);
-  sms_cram_expand_table[2] = (15 << 3) + (1 << 2);
-  sms_cram_expand_table[3] = (27 << 3) + (1 << 2);
+	sms_cram_expand_table[0] =  0;
+	sms_cram_expand_table[1] = 0x55;
+	sms_cram_expand_table[2] = 0xAA;
+	sms_cram_expand_table[3] = 0xFF;
 
-  for(i = 0; i < 16; i++)
-  {
-    uint8_t c = i << 4 | i;
-    gg_cram_expand_table[i] = c;    
-  }
+	for(uint8_t i = 0; i < 16; i++)
+	{
+		gg_cram_expand_table[i] = i << 4 | i;    
+	}
 }
 
 
@@ -368,7 +354,7 @@ void render_line(int32_t line)
 	/* Ensure we're within the VDP active area (incl. overscan) */
 	int32_t top_border = active_border[sms.display][vdp.extended];
 	int32_t vline = (line + top_border) % vdp.lpf;
-
+	
 	if (vline >= active_range[sms.display]) return;
 
 	/* adjust for Game Gear screen */
@@ -411,11 +397,11 @@ void render_line(int32_t line)
 
 			/* Blank leftmost column of display */
 			if((vdp.reg[0] & 0x20) && (IS_SMS || IS_MD))
-			memset(linebuf, BACKDROP_COLOR, 8);
+				memset(linebuf, BACKDROP_COLOR, 8);
 		}
 		else
 		{
-		/* Background color */
+			/* Background color */
 			memset(linebuf, BACKDROP_COLOR, bitmap.viewport.w + 2*bitmap.viewport.x);
 		}
 	}
@@ -427,14 +413,16 @@ void render_line(int32_t line)
 		parse_line(line);
 
 	/* LightGun mark */
+	#ifdef LIGHTGUN_ENABLED
+	/* Putting this in an ifdef because the condition loop is executed every render_line */
 	if (sms.device[0] == DEVICE_LIGHTGUN)
 	{
-		int dy = vdp.line - input.analog[0][1];
+		int32_t dy = vdp.line - input.analog[0][1];
 		if (abs(dy) < 6)
 		{
-			int i;
-			int start = input.analog[0][0] - 4;
-			int end = input.analog[0][0] + 4;
+			int32_t i;
+			int32_t start = input.analog[0][0] - 4;
+			int32_t end = input.analog[0][0] + 4;
 			if (start < 0) start = 0;
 			if (end > 255) end = 255;
 			for (i=start; i<end+1; i++)
@@ -443,6 +431,7 @@ void render_line(int32_t line)
 			}
 		}
 	}
+	#endif
 	
 	/* Only draw lines within the video output range ! */
 	if (view)
@@ -463,7 +452,9 @@ void render_bg_sms(int32_t line)
 	int32_t hscroll = ((vdp.reg[0] & 0x40) && (line < 0x10) && (sms.console != CONSOLE_GG)) ? 0 : (0x100 - vdp.reg[8]);
 	int32_t column = 0;
 	uint16_t attr;
-	uint16_t nt_addr = (vdp.ntab + ((v_line >> 3) << 6)) & (((sms.console == CONSOLE_SMS) && !(vdp.reg[2] & 1)) ? ~0x400 :0xFFFF);
+	uint16_t SMS_VDP_BUG = (((sms.console == CONSOLE_SMS) && !(vdp.reg[2] & 1)) ? ~0x400 :0xFFFF);
+	uint16_t nt_addr = (vdp.ntab + ((v_line >> 3) << 6)) & SMS_VDP_BUG;
+	uint16_t nt_addr_stop_verticalscroll = (vdp.ntab + ((line >> 3) << 6)) & SMS_VDP_BUG;
 	uint16_t *nt = (uint16_t *)&vdp.vram[nt_addr];
 	int32_t nt_scroll = (hscroll >> 3);
 	int32_t shift = (hscroll & 7);
@@ -488,7 +479,7 @@ void render_bg_sms(int32_t line)
 		{
 			locked = 1;
 			v_row = (line & 7) << 3;
-			nt = (uint16_t *)&vdp.vram[nt_addr];
+			nt = (uint16_t *)&vdp.vram[nt_addr_stop_verticalscroll];
 		}
 
 		/* Get name table attribute word */
@@ -513,7 +504,8 @@ void render_bg_sms(int32_t line)
 	/* Draw last column (clipped) */
 	if(shift)
 	{
-		int32_t x, c, a;
+		int32_t x;
+		uint8_t c, a;
 		uint8_t *p = &linebuf[(0 - shift)+(column << 3)];
 		attr = nt[(column + nt_scroll) & 0x1F];
 #ifndef LSB_FIRST
@@ -665,6 +657,7 @@ void palette_sync(int32_t index)
 			r = gg_cram_expand_table[r];
 			g = gg_cram_expand_table[g];
 			b = gg_cram_expand_table[b];
+			pixel[index] = MAKE_PIXEL(r, g, b);
 		}
 		else
 		{
@@ -673,10 +666,12 @@ void palette_sync(int32_t index)
 			r = (vdp.cram[index] >> 0) & 3;
 			g = (vdp.cram[index] >> 2) & 3;
 			b = (vdp.cram[index] >> 4) & 3;
-
+			
 			r = sms_cram_expand_table[r];
 			g = sms_cram_expand_table[g];
 			b = sms_cram_expand_table[b];
+			
+			pixel[index] = MAKE_PIXEL((r), (g), (b));
 		}
 	}
 	else
@@ -704,9 +699,9 @@ void palette_sync(int32_t index)
 			g = sms_cram_expand_table[g];
 			b = sms_cram_expand_table[b];
 		}
+		pixel[index] = MAKE_PIXEL(r, g, b);
 	}
 
-	pixel[index] = MAKE_PIXEL(r, g, b);
 }
 
 static void parse_satb(int32_t line)
@@ -718,11 +713,11 @@ static void parse_satb(int32_t line)
 	int32_t i = 0;
 
 	/* Line counter value */
-	int32_t vc = vc_table[sms.display][vdp.extended][line];
+	uint8_t vc = vc_table[sms.display][vdp.extended][line];
 
 	/* Sprite height (8x8 by default) */
-	int32_t yp;
-	int32_t height = 8;
+	uint8_t yp;
+	uint8_t height = 8;
   
 	/* Adjust height for 8x16 sprites */
 	if(vdp.reg[1] & 0x02) 
@@ -751,7 +746,7 @@ static void parse_satb(int32_t line)
 		yp = vc - yp;
 
 		/* Sprite is within vertical range? */
-		if((yp >= 0) && (yp < height))
+		if(yp < height)
 		{
 			/* Sprite limit reached? */
 			if (object_index_count == 8)
@@ -816,10 +811,10 @@ static void update_bg_pattern_cache(void)
 
 static void remap_8_to_16(int32_t line)
 {
-	uint32_t i;
+	int32_t i;
 	uint16_t *p = (uint16_t *)&bitmap.data[(line * bitmap.pitch)];
-	uint32_t width = bitmap.viewport.w + 2*bitmap.viewport.x;
-	
+	int32_t width = (bitmap.viewport.w)+2 * bitmap.viewport.x;
+
 	for(i = 0; i < width; i++)
 	{
 		p[i] = pixel[ internal_buffer[i] & PIXEL_MASK ];

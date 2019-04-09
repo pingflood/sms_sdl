@@ -1,42 +1,76 @@
 PRGNAME     = sms_sdl
+CC			= /opt/rs97-toolchain/bin/mipsel-linux-gcc
 
-# define regarding OS, which compiler to use
-EXESUFFIX = 
-TOOLCHAIN = 
-CC          = /opt/rs97-toolchain/bin/mipsel-linux-gcc
-CCP         = /opt/rs97-toolchain/bin/mipsel-linux-g++
-LD          = /opt/rs97-toolchain/bin/mipsel-linux-gcc
+# Possible choices : rs97, k3s (PAP K3S), sdl, amini, fbdev
+PORT = rs97
+# Possible choices : alsa, pulse (pulseaudio), oss, sdl12 (SDL 1.2 sound output), portaudio, libao
+SOUND_OUTPUT = oss
+# Possible choices : crabemu_sn76489 (less accurate, GPLv2), maxim_sn76489 (somewhat problematic license but good accuracy)
+SOUND_ENGINE = maxim_sn76489
+# Possible choices : z80 (accurate but proprietary), eighty (EightyZ80's core, GPLv2)
+Z80_CORE = z80
+SCALE2X_UPSCALER = 1
+PROFILE = APPLY
+ZIP_SUPPORT = 1
 
-# add SDL dependencies
+SRCDIR		= ./source ./source/cpu_cores/$(Z80_CORE) ./source/sound ./source/unzip
+SRCDIR		+= ./source/scalers ./source/ports/$(PORT) ./source/sound/$(SOUND_ENGINE) ./source/sound_output/$(SOUND_OUTPUT)
+VPATH		= $(SRCDIR)
+SRC_C		= $(foreach dir, $(SRCDIR), $(wildcard $(dir)/*.c))
+SRC_CP		= $(foreach dir, $(SRCDIR), $(wildcard $(dir)/*.cpp))
+OBJ_C		= $(notdir $(patsubst %.c, %.o, $(SRC_C)))
+OBJ_CP		= $(notdir $(patsubst %.cpp, %.o, $(SRC_CP)))
+OBJS		= $(OBJ_C) $(OBJ_CP)
 
-#-msym32 -mlong-calls
-CFLAGS		= -Ofast -fno-pic -fno-pie -mno-abicalls -fdata-sections -ffunction-sections -mips32 -mno-shared -mno-mips16
-CFLAGS		+= -std=gnu99 -DLSB_FIRST -DMAXIM_PSG
-CFLAGS 		+= -Isource -Isource/eighty -Isource/generic -I./source/sound -Isource/unzip -Isource/rs97 -Isource/sound/maxim_sn76489 -Iinclude
-#CFLAGS		+= -fprofile-generate -fprofile-dir=/mnt/int_sd/profile -funsafe-math-optimizations -fassociative-math -ffinite-math-only -fsingle-precision-constant -fsection-anchors -falign-functions=2 -mno-check-zero-division
-CFLAGS		+= -fprofile-use -msym32 -mlong-calls -fno-math-errno -funsafe-math-optimizations -fassociative-math -ffinite-math-only -fsingle-precision-constant -fsection-anchors -falign-functions=2 -mno-check-zero-division
+CFLAGS		= -Ofast -fdata-sections -ffunction-sections -mno-fp-exceptions -mno-check-zero-division -mframe-header-opt -fsingle-precision-constant -fno-common -mips32 -fno-PIC -mno-abicalls -flto -fwhole-program
+CFLAGS		+= -DALIGN_DWORD
+CFLAGS		+= -DLSB_FIRST -std=gnu99
+CFLAGS		+= -Isource -Isource/cpu_cores/$(Z80_CORE) -Isource/scalers -Isource/ports/$(PORT) -I./source/sound -Isource/unzip -Isource/sdl -Isource/sound/$(SOUND_ENGINE) -Isource/sound_output
 
-CXXFLAGS	= $(CFLAGS) 
-LDFLAGS     = -lSDL -lm -flto -lz  -Wl,--as-needed -Wl,--gc-sections -flto -s ./libportaudio.a
+SRCDIR		+= ./source/text/fb
+CFLAGS		+= -Isource/text/fb
 
-# Files to be r
-SRCDIR    = ./source ./source/unzip ./source/eighty ./source/sound ./source/generic ./source/rs97 ./source/sound/maxim_sn76489
-VPATH     = $(SRCDIR)
-SRC_C   = $(foreach dir, $(SRCDIR), $(wildcard $(dir)/*.c))
-SRC_CP   = $(foreach dir, $(SRCDIR), $(wildcard $(dir)/*.cpp))
-OBJ_C   = $(notdir $(patsubst %.c, %.o, $(SRC_C)))
-OBJ_CP   = $(notdir $(patsubst %.cpp, %.o, $(SRC_CP)))
-OBJS     = $(OBJ_C) $(OBJ_CP)
+ifeq ($(PROFILE), YES)
+CFLAGS 		+= -fprofile-generate=/home/retrofw/profile
+else ifeq ($(PROFILE), APPLY)
+CFLAGS		+= -fprofile-use
+endif
+
+ifeq ($(SOUND_ENGINE), maxim_sn76489)
+CFLAGS 		+= -DMAXIM_PSG
+endif
+
+ifeq ($(ZIP_SUPPORT), 0)
+CFLAGS 		+= -DNOZIP_SUPPORT
+endif
+
+ifeq ($(SCALE2X_UPSCALER), 1)
+CFLAGS 		+= -DSCALE2X_UPSCALER
+CFLAGS		+= -Isource/scale2x
+SRCDIR		+= ./source/scale2x
+endif
+
+LDFLAGS     = -lc -lgcc -lSDL -no-pie -Wl,--as-needed -Wl,--gc-sections -flto -fwhole-program -s
+
+ifeq ($(SOUND_OUTPUT), portaudio)
+LDFLAGS		+= -lportaudio
+endif
+ifeq ($(SOUND_OUTPUT), libao)
+LDFLAGS		+= -lao
+endif
+ifeq ($(SOUND_OUTPUT), alsa)
+LDFLAGS		+= -lasound
+endif
+ifeq ($(SOUND_OUTPUT), pulse)
+LDFLAGS		+= -lpulse -lpulse-simple
+endif
 
 # Rules to make executable
-$(PRGNAME)$(EXESUFFIX): $(OBJS)  
-	$(LD) $(CFLAGS) -o $(PRGNAME)$(EXESUFFIX) $^ $(LDFLAGS)
+$(PRGNAME): $(OBJS)  
+	$(CC) $(CFLAGS) -o $(PRGNAME) $^ $(LDFLAGS)
 
 $(OBJ_C) : %.o : %.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-$(OBJ_CP) : %.o : %.cpp
-	$(CCP) $(CXXFLAGS) -c -o $@ $<
-
 clean:
-	rm -f $(PRGNAME)$(EXESUFFIX) *.o
+	rm -f $(PRGNAME) *.o

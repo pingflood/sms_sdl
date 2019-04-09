@@ -1,15 +1,8 @@
-#ifndef _SHARED_H_
-#define _SHARED_H_
-
-typedef unsigned char uint8;
-typedef unsigned short int uint16;
-typedef unsigned long int uint32;
-
-typedef signed char int8;
-typedef signed short int int16;
-typedef signed long int int32;
+#ifndef SHARED_H_
+#define SHARED_H_
 
 /* Convenience stuff... */
+#undef INLINE
 #if __STDC_VERSION__ >= 199901L
 #    define INLINE static inline
 #elif defined(__GNUC__) || defined(__GNUG__)
@@ -27,7 +20,6 @@ typedef signed long int int32;
 #include <malloc.h>
 #include <math.h>
 #include <limits.h>
-#include <zlib.h>
 
 #ifndef NGC
 #ifndef PATH_MAX
@@ -51,12 +43,18 @@ typedef signed long int int32;
 #include "fmintf.h"
 #include "sound.h"
 #include "system.h"
-#include "error.h"
 #include "loadrom.h"
 #include "config.h"
 #include "state.h"
 #include "z80_wrap.h"
+#include "sound_output.h"
+
+#include "miniz.h"
 #include "fileio.h"
 #include "unzip.h"
+
+#ifdef SCALE2X_UPSCALER
+#include "scale2x.h"
+#endif
 
 #endif /* _SHARED_H_ */

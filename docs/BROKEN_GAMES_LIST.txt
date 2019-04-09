@@ -1,0 +1,87 @@
+Known issues
+=============
+
+-  Fantastic Dizzy (Master System) : PAL Timings
+
+Active Range should be 294 for PAL but it had to be set to 267 to make Dizzy work properly.
+Unfortunately this is still not quite correct, we need a proper fix for it.
+
+- LCD Persistence issues
+
+Some games take advantage of the Game Gear's poor LCD screen.
+If this behaviour is not replicated then it results in some heavy flickering.
+
+Here's a list of affected games :
+The Adventures of Batman & Robin (Disappearing HUD)
+Super Monaco GP 2 (Titlescreen)
+Space Harrier
+Ninja Gaiden (affects 3rd & 2nd act)
+Halley Wars
+MLBPA Baseball
+
+MAME has an implementation of LCD persistence here (first appeared in MESS 0.135) :
+https://github.com/mamedev/mame/blob/08cd6110268f9363e6c2cb9f0b6d92c00dadfbd6/src/mame/machine/sms.cpp#L1557
+
+- Graphics Board
+http://www.smspower.org/forums/15032-SegaGraphicBoardV20ReverseEngineering
+No support for it given how recent it is. MEKA supports this so i should take a look at it.
+
+- Space Gun
+http://www.smspower.org/Development/SpaceGun-SMS
+
+I need to add back Lightgun emulation.
+The code is left turned off for now because most games also support the controllers but this game requires the light gun.
+
+There's also an issue with memory mapping. I believe we don't suffer from that bug ?
+
+- Support for 4PAK Mapper
+Mostly similar to Codemasters's writemap function except for 8000-0xBFFF range.
+
+Write xx to 3FFE: map bank (xx)&maxbankmask to memory slot in 0000-3FFF region
+Write yy to 7FFF: map bank (yy)&maxbankmask to memory slot in 4000-7FFF region
+Write zz to BFFF: map bank ((xx&0x30)+(zz))&maxbankmask to memory slot in 8000-BFFF region
+
+Implementations :
+https://github.com/ocornut/meka/blob/e0f6d9eb89217c4a083fe09b71900c5fa9321abf/meka/srcs/mappers.c#L402
+https://github.com/OpenEmu/CrabEmu-Core/blob/a25c7277cd14f9e32647e1b9e1a45621fb051f13/consoles/sms/mapper-4PAA.c
+
+Problematic games (To be checked & tested)
+=================================
+
+-   Alibaba and 40 Thieves / Block Hole 
+http://www.smspower.org/Development/AlibabaAnd40Thieves-SMS
+Looks like it will need more research.
+
+-  Bank Panic : R register
+http://www.smspower.org/Development/BankPanic-SMS
+
+I need to check if that's the case but there's so much we can do as we are already using the latest 
+z80 core. (bar a few missing updates)
+
+-  California Games II
+http://www.smspower.org/Development/CaliforniaGamesII-SMS
+Sonic's Edusoft had a similar issue with it expecting VDP Register 1 to be set to 0xE0, which is what the BIOS sets it to.
+
+-  Dallyeora Pigu Wang
+http://www.smspower.org/Development/DallyeoraPiguWang-SMS
+
+Uses R register and Korean mapper. (Filesize is also not a power of 2)
+Sounds like a problem.
+
+-  Impossible Mission
+http://www.smspower.org/Development/ImpossibleMission-SMS
+Uses R register. 
+
+-  James Pond 3 - Operation Starfi5h (Game Gear)
+http://www.smspower.org/Development/JamesPond3-GG
+
+-  Rainbow Islands
+http://www.smspower.org/Development/RainbowIslands-SMS
+Brazil release fixed this, perhaps we could patch the game on the fly ?
+But that would be outside the scope of an emulator.
+
+-  PGA Tour Golf
+http://www.smspower.org/Development/PGATourGolf-SMS
+
+-  Zool : Ninja of the Nth Dimension
+http://www.smspower.org/Development/Zool-SMS

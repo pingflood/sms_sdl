@@ -1,14 +1,13 @@
-SMSPlus-GX RS97
+TODO LIST
+=========
 
-- While PortAudio is sufficent for Linux-based platforms and perhaps Windows & Macc OSX ones,
-it does not have ports to other platforms like the Dreamcast and KolibriOS for example.
-This is why we need better SDL sound code. I can't believe Genesis Plus GX still uses the same sound code
-SMS Plus SDL used to use, it's terrible and causes un-necesarry frameskipping even when it does run fullspeed.
+-  There's a lot of conversions between integers and all according to Clang.
+It might not be possible to fix all of that in one go though but perhaps we could fix most of them ?
 
--  The GPLv2 EightyOne's Z80 CPU Core is very inaccurate. While it's much improved compared to last version,
-it's still much inferior to the original z80.c core. For example, Fantastic Dizzy is completely bugged with it.
-According to Flubba's VDP test, it's also not perfectly in sync with the display. 
-It could be an issue with timing too rather than accuracy... Unfortunely, that's way over my head :c
+Update : We fixed most of them, but some will have to remain due to the design of SMS Plus GX.
 
-I also tried to add support for CrabEmu's own z80 core but i couldn't manage to make it work.
-Perhaps i could try it again with CZ80 instead ?
+-  Implement triple buffering support in FBDev.
+It could fix our speed issues in fbdev... or not.
+
+-  Add FBDev specific miyoo port
+Basically a hardware-accelerated miyoo port directly using DMA.

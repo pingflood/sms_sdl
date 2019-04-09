@@ -30,16 +30,13 @@ extern sn76489_t psg_sn;
 
 uint32_t system_save_state(FILE* fd)
 {
-	uint32_t i;
-	
     /* Save VDP context */
     fwrite(&vdp, sizeof(vdp_t), sizeof(int8_t), fd);
 
     /* Save SMS context */
     fwrite(&sms, sizeof(sms_t), sizeof(int8_t), fd);
 
-	for(i=0;i<4;i++)
-		fputc(cart.fcr[i], fd);
+	fwrite(cart.fcr, 4, sizeof(int8_t), fd);
 
     fwrite(cart.sram, 0x8000, sizeof(int8_t), fd);
 
@@ -53,7 +50,6 @@ uint32_t system_save_state(FILE* fd)
     #ifdef MAXIM_PSG
     fwrite(SN76489_GetContextPtr(0), SN76489_GetContextSize(), sizeof(int8_t), fd);
     #else
-    extern sn76489_t psg_sn;
     fwrite(&psg_sn, sizeof(sn76489_t), sizeof(int8_t), fd);
     #endif
 	
@@ -62,7 +58,6 @@ uint32_t system_save_state(FILE* fd)
 
 void system_load_state(FILE* fd)
 {
-	int32_t i;
 	uint8_t *buf;
 	
 	/* Initialize everything */
@@ -76,10 +71,9 @@ void system_load_state(FILE* fd)
 
 	/** restore video & audio settings (needed if timing changed) ***/
 	vdp_init();
-	sound_init();
+	SMSPLUS_sound_init();
 
-	for(i=0;i<4;i++)
-		cart.fcr[i] = fgetc(fd);
+	fread(cart.fcr, 4, sizeof(int8_t), fd);
 
     fread(cart.sram, 0x8000, sizeof(int8_t), fd);
 
@@ -99,7 +93,6 @@ void system_load_state(FILE* fd)
     SN76489_SetContext(0, buf);
     free(buf);
     #else
-    extern sn76489_t psg_sn;
     buf = malloc(sizeof(sn76489_t));
     fread(buf, sizeof(sn76489_t), sizeof(int8_t), fd);
     memcpy(&psg_sn, buf, sizeof(sn76489_t));
@@ -135,13 +128,13 @@ void system_load_state(FILE* fd)
 
 	/* Force full pattern cache update */
 	bg_list_index = 0x200;
-	for(i = 0; i < 0x200; i++)
+	for(uint16_t i = 0; i < 0x200; i++)
 	{
 		bg_name_list[i] = i;
-		bg_name_dirty[i] = -1;
+		bg_name_dirty[i] = 255;
 	}
 
 	/* Restore palette */
-	for(i = 0; i < PALETTE_SIZE; i++)
+	for(uint32_t i = 0; i < PALETTE_SIZE; i++)
 		palette_sync(i);
 }

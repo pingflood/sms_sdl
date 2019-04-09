@@ -28,12 +28,12 @@ bitmap_t bitmap;
 cart_t cart;
 input_t input;
 
-extern uint32_t z80_cycle_count ;
+extern int32_t z80_cycle_count;
 
 /* Run the virtual console emulation for one frame */
 void system_frame(uint32_t skip_render)
 {
-	uint32_t iline = 0, line_z80 = 0;
+	int32_t iline = 0, line_z80 = 0;
 
 	/* Debounce pause key */
 	if(input.system & INPUT_PAUSE)
@@ -110,7 +110,7 @@ void system_frame(uint32_t skip_render)
 		}
 
 		/* Run sound chips */
-		sound_update(vdp.line);
+		SMSPLUS_sound_update(vdp.line);
 	}
 
 	/* Adjust Z80 cycle count for next frame */
@@ -119,12 +119,11 @@ void system_frame(uint32_t skip_render)
 
 void system_init(void)
 {
-	error_init();
 	sms_init();
 	pio_init();
 	vdp_init();
 	render_init();
-	sound_init();
+	SMSPLUS_sound_init();
 }
 
 void system_shutdown(void)
@@ -133,8 +132,7 @@ void system_shutdown(void)
 	pio_shutdown();
 	vdp_shutdown();
 	render_shutdown();
-	sound_shutdown();
-	error_shutdown();
+	SMSPLUS_sound_shutdown();
 }
 
 void system_reset(void)
@@ -143,18 +141,18 @@ void system_reset(void)
 	pio_reset();
 	vdp_reset();
 	render_reset();
-	sound_reset();
+	SMSPLUS_sound_reset();
 	system_manage_sram(cart.sram, SLOT_CART, SRAM_LOAD);
 }
 
 
 void system_poweron(void)
 {
-  system_init();
-  system_reset();
+	system_init();
+	system_reset();
 }
 
 void system_poweroff(void)
 {
-  system_manage_sram(cart.sram, SLOT_CART, SRAM_SAVE);
+	system_manage_sram(cart.sram, SLOT_CART, SRAM_SAVE);
 }

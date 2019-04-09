@@ -19,17 +19,16 @@
  *   TMS9918 and legacy video mode support.
  *
  ******************************************************************************/
-
-#ifndef _TMS_H_
-#define _TMS_H_
+#ifndef TMS_H_
+#define TMS_H_
 
 /* Global variables */
-extern int text_counter;
+extern int32_t text_counter;
 
 /* Function prototypes */
 extern void make_tms_tables(void);
-extern void render_bg_tms(int line);
-extern void render_obj_tms(int line);
-extern void parse_line(int line);
+extern void render_bg_tms(int32_t line);
+extern void render_obj_tms(int32_t line);
+extern void parse_line(int32_t line);
 
 #endif /* _TMS_H_ */
