@@ -38,6 +38,10 @@ void Sound_Init(void)
 		return;
 	}
 
+#ifdef NONBLOCKING_AUDIO
+	snd_pcm_nonblock(handle, 1);
+#endif
+
 	/* Allocate a hardware parameters object. */
 	snd_pcm_hw_params_alloca(&params);
 
@@ -106,10 +110,6 @@ void Sound_Init(void)
 		fprintf(stderr, "Unable to set hw parameters: %s\n", snd_strerror(rc));
 		return;
 	}
-
-#ifdef NONBLOCKING_AUDIO
-	snd_pcm_nonblock(handle, 1);
-#endif
 	
 	return;
 }
@@ -120,7 +120,7 @@ void Sound_Update(void)
 	uint32_t len = SOUND_FREQUENCY / snd.fps;
 	long ret;
 
-	if (!handle || !snd.output[1] || !snd.output[0]) return;
+	if (!handle) return;
 
 	for (i = 0; i < (4 * len); i++) 
 	{
